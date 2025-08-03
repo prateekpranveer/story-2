@@ -117,7 +117,7 @@ export default function LiveTextEditor() {
   return (
     <div
       className={`flex min-h-screen transition-colors duration-500 ${
-        darkMode ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-800"
+        darkMode ? "bg-slate-900 text-white" : "bg-yellow-50 text-slate-800"
       }`}
     >
       {/* Backdrop on mobile when sidebar is open */}
@@ -143,7 +143,7 @@ export default function LiveTextEditor() {
           ${
             darkMode
               ? "bg-gray-800 border-gray-700"
-              : "bg-white border-gray-300"
+              : "bg-slate-50 border-gray-300"
           }
           p-6 ${showSidebar ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
@@ -171,7 +171,7 @@ export default function LiveTextEditor() {
                     : "hover:bg-pink-200 border border-pink-600 dark:hover:bg-gray-700"
                 }`}
               >
-                <span>{a.title || "Untitled"}</span>
+                <span className="w-[180px]">{a.title || "Untitled"}</span>
                 <button
                   onClick={() => deleteArticle(a._id)}
                   className="hover:text-red-800 text-sm px-2 transition-all duration-200 hover:scale-110"
@@ -186,13 +186,54 @@ export default function LiveTextEditor() {
       </div>
 
       {/* Main Editor */}
-      <div className="flex-grow w-full px-6 pt-12 pb-12 max-w-5xl mx-auto animate-fadeIn">
+      
+      <div className="flex-grow w-full px-6 pt-6 max-w-5xl mx-auto animate-fadeIn">
+        
+        {/* Saving Feature */}
+        
+<div className="flex gap-2 w-40 h-4 items-center">
+  {saving ? (
+    <div className="flex gap-1">
+      <div className="w-2 h-2 rounded-full bg-blue-300 animate-[dot-bounce_0.8s_infinite]"></div>
+      <div className="w-2 h-2 rounded-full bg-pink-300 animate-[dot-bounce_0.8s_infinite_0.15s]"></div>
+      <div className="w-2 h-2 rounded-full bg-purple-300 animate-[dot-bounce_0.8s_infinite_0.3s]"></div>
+    </div>
+  ) : lastSaved ? (
+    <div className="flex gap-2 items-center">
+      <div className="flex gap-1">
+        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+      </div>
+      <span className="text-green-700 text-xs font-medium">
+        Saved at {lastSaved}
+      </span>
+    </div>
+  ) : (
+    <div className="flex gap-2 items-center">
+      <div className="flex gap-1">
+        <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+        <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+        <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+      </div>
+      <span className="text-gray-400 text-xs">Not saved yet</span>
+    </div>
+  )}
+</div>
+
+
+
+
+
+            {/* Saving Feature end */}
+
+
         <input
           type="text"
           value={title}
           onChange={handleTitleChange}
           placeholder="Enter title..."
-          className="w-full text-3xl font-light font-serif bg-transparent mb-4 outline-none transition-all duration-300 focus:scale-[1.02]"
+          className="w-full mt-4 text-3xl font-light font-serif bg-transparent mb-4 outline-none transition-all duration-300 focus:scale-[1.02]"
         />
         <div
           ref={editorRef}
@@ -209,34 +250,17 @@ export default function LiveTextEditor() {
 
       {/* Bottom Word Count & Dark Mode Toggle */}
       <div
-        className={`fixed bottom-0 left-0 right-0 px-6 py-2 shadow-md transition-all duration-500 ${
+        className={`fixed bottom-0 left-0 right-0 px-6 shadow-md transition-all duration-500 ${
           darkMode ? "bg-gray-900" : "bg-white"
         }`}
       >
+        {/*
         <div className="w-full mx-auto flex justify-between items-center">
           <div className="flex gap-6 text-sm">
             <span>Word count: {wordCount}</span>
             <span>Goal: {totalGoal}</span>
           </div>
-          <div className="flex gap-4 items-center">
-            {saving ? (
-              <span className="text-gray-500 font-medium animate-pulse">
-                Saving...
-              </span>
-            ) : lastSaved ? (
-              <span className="text-green-700 font-medium">
-                ✅ Saved at {lastSaved}
-              </span>
-            ) : (
-              <span className="text-gray-400 text-sm">Not saved yet</span>
-            )}
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="px-2 py-1 text-xs border rounded transition-transform duration-300 hover:scale-105"
-            >
-              {darkMode ? "☀️" : "🌙"}
-            </button>
-          </div>
+          
         </div>
         <div className="w-full h-[6px] bg-gray-200 dark:bg-gray-700 rounded-full mt-2 overflow-hidden">
           <div
@@ -244,6 +268,10 @@ export default function LiveTextEditor() {
             style={{ width: `${progress}%` }}
           ></div>
         </div>
+          */}
+
+
+        
       </div>
     </div>
   );
