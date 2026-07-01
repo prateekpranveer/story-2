@@ -233,13 +233,13 @@ export default function LiveTextEditor() {
           value={title}
           onChange={handleTitleChange}
           placeholder="Enter title..."
-          className="w-full mt-4 text-3xl font-light font-serif bg-transparent mb-4 outline-none transition-all duration-300 focus:scale-[1.02]"
+          className="w-full mt-4 text-xl font-light font-serif bg-transparent mb-4 outline-none transition-all duration-300 focus:scale-[1.02]"
         />
         <div
           ref={editorRef}
           contentEditable
           onInput={handleInput}
-          className="min-h-[300px] text-[16px] leading-relaxed outline-none prose max-w-none font-serif transition-all duration-300"
+          className="min-h-[300px] text-[12px] leading-relaxed outline-none prose max-w-none font-serif transition-all duration-300"
           style={{
             whiteSpace: "pre-wrap",
             wordWrap: "break-word",
