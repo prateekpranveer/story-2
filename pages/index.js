@@ -147,12 +147,12 @@ export default function LiveTextEditor() {
           }
           p-6 ${showSidebar ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
-        <h2 className="font-bold mono text-purple-800 mb-3 text-lg">The Story</h2>
+        <h2 className="font-bold mono text-purple-800 mb-3 text-lg">Scripts</h2>
         <button
           onClick={createNewArticle}
           className="w-full mb-3 mono py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700 transition-all duration-300 hover:scale-105"
         >
-          ➕ Add Scene
+          ➕ Add Video Script
         </button>
         <div className="flex flex-col gap-2">
           {articles.map((a) => (
