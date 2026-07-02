@@ -129,8 +129,8 @@ export default function LiveTextEditor() {
   const [wpmInput, setWpmInput] = useState("150");
   
   // Layout Customization States
-  const [fontSize, setFontSize] = useState(16);
-  const [lineHeight, setLineHeight] = useState(1.8);
+  const [fontSize, setFontSize] = useState(14);
+  const [lineHeight, setLineHeight] = useState(1.4);
   const [fontWeight, setFontWeight] = useState("300");
   const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0].value);
   
@@ -426,14 +426,14 @@ export default function LiveTextEditor() {
 
         <button
           onClick={createNewArticle}
-          className={`w-full mb-6 flex items-center justify-center gap-2 py-2.5 text-[13px] rounded-md border transition-colors ${
+          className={`w-full mb-6 flex items-center justify-center gap-2 py-2.5 text-[11px] tracking-wider rounded-sm border transition-colors ${
             darkMode
               ? "border-neutral-700 text-neutral-300 hover:bg-neutral-800/50"
               : "border-neutral-300 text-neutral-600 hover:bg-neutral-50"
           }`}
         >
           <FiPlus size={13} />
-          New script
+          NEW SCRIPT
         </button>
 
         <div className="flex flex-col gap-1">
@@ -444,7 +444,7 @@ export default function LiveTextEditor() {
                   setSelectedId(a._id);
                   setShowSidebar(false);
                 }}
-                className={`flex-1 text-left px-3 py-2 rounded-md text-[13px] truncate transition-colors ${
+                className={`flex-1 text-left px-3 py-3 rounded-md text-[10px] tracking-wide truncate transition-colors ${
                   selectedId === a._id
                     ? themeThemeClass.bgActive
                     : darkMode
@@ -691,12 +691,12 @@ export default function LiveTextEditor() {
 
       {/* Analytical HUD System */}
       <div
-        className={`fixed bottom-0 left-0 right-0 md:left-64 px-8 py-3 border-t transition-colors duration-300 z-20 ${themeThemeClass.hudBg}`}
+        className={`fixed bottom-0 left-0 right-0 md:left-64 px-8 py-2 border-t transition-colors duration-300 z-20 ${themeThemeClass.hudBg}`}
       >
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FiClock size={13} className={darkMode ? "text-neutral-500" : "text-neutral-400"} />
-            <span className={`text-[13px] font-light tracking-wide ${darkMode ? "text-neutral-300" : "text-neutral-700"}`}>
+            <span className={`text-[11px] font-light tracking-wide ${darkMode ? "text-neutral-300" : "text-neutral-700"}`}>
               {formattedTime}{" "}
               <span className={darkMode ? "text-neutral-600" : "text-neutral-400"}>
                 est. video length
@@ -710,7 +710,7 @@ export default function LiveTextEditor() {
                 setWpmInput(String(wpm));
                 setShowWpmMenu((v) => !v);
               }}
-              className={`text-[11px] font-light rounded-full px-2.5 py-1 border transition-colors ${
+              className={`text-[9px] font-light rounded-full px-2.5 py-1 border transition-colors ${
                 darkMode
                   ? "border-neutral-700 text-neutral-400 hover:bg-neutral-800"
                   : "border-neutral-200 text-neutral-400 hover:bg-neutral-100"
