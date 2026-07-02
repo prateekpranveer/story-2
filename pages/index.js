@@ -65,11 +65,14 @@ export default function LiveTextEditor() {
   // Teleprompter Engine States
   const [teleprompterMode, setTeleprompterMode] = useState(false);
   const [isScrolling, setIsScrolling] = useState(false);
-  const [scrollSpeed, setScrollSpeed] = useState(2); 
+  const [scrollSpeed, setScrollSpeed] = useState(1.0); 
 
   const editorRef = useRef(null);
   const wpmMenuRef = useRef(null);
   const scrollIntervalRef = useRef(null);
+  
+  // CRITICAL FIX: Track exact sub-pixel positions as a decimal accumulator
+  const scrollPosRef = useRef(0);
 
   useEffect(() => {
     async function fetchArticles() {
@@ -103,11 +106,30 @@ export default function LiveTextEditor() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Sync scroll tracker if user manually scrolls or resets page
+  useEffect(() => {
+    const handleManualScroll = () => {
+      if (!isScrolling) {
+        scrollPosRef.current = window.scrollY;
+      }
+    };
+    window.addEventListener("scroll", handleManualScroll);
+    return () => window.removeEventListener("scroll", handleManualScroll);
+  }, [isScrolling]);
+
   // Teleprompter Automated Scroll Loop Handler Matrix
   useEffect(() => {
     if (isScrolling && teleprompterMode) {
+      // Initialize accumulator to present layout coordinates
+      scrollPosRef.current = window.scrollY;
+
       const performScroll = () => {
-        window.scrollBy(0, scrollSpeed);
+        // Increment by precise decimal steps (e.g., +0.1)
+        scrollPosRef.current += scrollSpeed;
+        
+        // Window.scrollTo handles sub-pixel rendering gracefully
+        window.scrollTo(0, scrollPosRef.current);
+        
         scrollIntervalRef.current = requestAnimationFrame(performScroll);
       };
       scrollIntervalRef.current = requestAnimationFrame(performScroll);
@@ -125,10 +147,10 @@ export default function LiveTextEditor() {
 
       if (e.key === "VolumeUp" || e.key === "ArrowUp") {
         e.preventDefault();
-        setScrollSpeed((prev) => Math.min(prev + 0.5, 10));
+        setScrollSpeed((prev) => Math.min(parseFloat((prev + 0.1).toFixed(1)), 15));
       } else if (e.key === "VolumeDown" || e.key === "ArrowDown") {
         e.preventDefault();
-        setScrollSpeed((prev) => Math.max(prev - 0.5, 0.5));
+        setScrollSpeed((prev) => Math.max(parseFloat((prev - 0.1).toFixed(1)), 0.1));
       } else if (e.key === " ") {
         e.preventDefault();
         setIsScrolling((prev) => !prev);
@@ -220,6 +242,7 @@ export default function LiveTextEditor() {
   };
 
   const resetTeleprompterScroll = () => {
+    scrollPosRef.current = 0;
     window.scrollTo({ top: 0, behavior: "smooth" });
     setIsScrolling(false);
   };
@@ -342,7 +365,7 @@ export default function LiveTextEditor() {
       )}
 
       {/* Main Content Sheet Area */}
-      <div className={`flex-grow w-full px-8 pt-10 pb-32 max-w-3xl mx-auto transition-all ${teleprompterMode ? "my-auto py-48" : ""}`}>
+      <div className={`flex-grow w-full px-8 pt-10 pb-32 max-w-3xl mx-auto transition-all ${teleprompterMode ? "my-auto py-0" : ""}`}>
         
         {/* Fixed Control Box for Teleprompter Session Engine */}
         {teleprompterMode && (
@@ -364,7 +387,7 @@ export default function LiveTextEditor() {
             <div className="w-[1px] h-4 bg-neutral-800" />
             <div className="flex items-center gap-1.5">
               <button 
-                onClick={() => setScrollSpeed(p => Math.max(p - 0.5, 0.5))}
+                onClick={() => setScrollSpeed(p => Math.max(parseFloat((p - 0.1).toFixed(1)), 0.1))}
                 className="text-[11px] px-2 py-0.5 bg-neutral-800 rounded hover:bg-neutral-700"
               >
                 -
@@ -373,7 +396,7 @@ export default function LiveTextEditor() {
                 {scrollSpeed.toFixed(1)}px
               </span>
               <button 
-                onClick={() => setScrollSpeed(p => Math.min(p + 0.5, 10))}
+                onClick={() => setScrollSpeed(p => Math.min(parseFloat((p + 0.1).toFixed(1)), 15))}
                 className="text-[11px] px-2 py-0.5 bg-neutral-800 rounded hover:bg-neutral-700"
               >
                 +
@@ -543,7 +566,7 @@ export default function LiveTextEditor() {
           spellCheck={false}
           className={`min-h-[400px] outline-none transition-all duration-150 ${
             teleprompterMode 
-              ? "text-white select-none pointer-events-none text-center" 
+              ? "text-white select-none pointer-events-none text-center py-[50vh]" 
               : darkMode 
               ? "text-neutral-200" 
               : "text-neutral-700"
