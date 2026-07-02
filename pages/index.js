@@ -150,6 +150,22 @@ export default function LiveTextEditor() {
 
   const themeThemeClass = getThemeClasses(currentTheme, darkMode);
 
+
+
+  useEffect(() => {
+  const handler = (e) => {
+    alert(`Key: ${e.key}`);
+    console.log(e);
+  };
+
+  window.addEventListener("keydown", handler);
+
+  return () => window.removeEventListener("keydown", handler);
+}, []);
+
+
+
+
   useEffect(() => {
     async function fetchArticles() {
       const result = await client.fetch(
