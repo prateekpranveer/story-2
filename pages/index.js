@@ -22,6 +22,7 @@ import {
   FiMaximize2,
   FiMinimize2,
   FiLoader,
+  FiTv,
 } from "react-icons/fi";
 
 const HARDCODED_PASSWORD = "gotxy";
@@ -97,6 +98,7 @@ export default function LiveTextEditor() {
   const [darkMode, setDarkMode] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isTeleprompterMode, setIsTeleprompterMode] = useState(false);
   
   const [isLocked, setIsLocked] = useState(true);
   const [passwordInput, setPasswordInput] = useState("");
@@ -132,6 +134,9 @@ export default function LiveTextEditor() {
   const [customBgColor, setCustomBgColor] = useState(null);
 
   const editorRef = useRef(null);
+  const workspaceContainerRef = useRef(null); // Reference to handle window instance scrolling
+  const isScrollingRemoteRef = useRef(false); // Flag to prevent scroll bounce loop updates
+  
   const floatingMenuRef = useRef(null);
   const fontDropdownRef = useRef(null);
   const layoutDropdownRef = useRef(null);
@@ -186,6 +191,36 @@ export default function LiveTextEditor() {
       checkActiveFormats();
     }
     fetchContent();
+  }, [selectedId, isLocked]);
+
+  // Real-Time Listener to synchronize incoming remote scroll modifications
+  useEffect(() => {
+    if (!selectedId || isLocked) return;
+
+    const query = `*[_type == "novelContent" && _id == $id]`;
+    const subscription = client.listen(query, { id: selectedId }).subscribe((update) => {
+      const remoteScrollPercent = update.result?.scrollPercent;
+      
+      if (remoteScrollPercent !== undefined && workspaceContainerRef.current) {
+        isScrollingRemoteRef.current = true;
+        
+        const container = workspaceContainerRef.current;
+        const maxScrollTop = container.scrollHeight - container.clientHeight;
+        const targetScrollTop = maxScrollTop * remoteScrollPercent;
+        
+        container.scrollTo({
+          top: targetScrollTop,
+          behavior: "smooth"
+        });
+
+        // Release lock after smooth transition concludes
+        setTimeout(() => {
+          isScrollingRemoteRef.current = false;
+        }, 300);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [selectedId, isLocked]);
 
   useEffect(() => {
@@ -268,8 +303,31 @@ export default function LiveTextEditor() {
     [selectedId, isLocked]
   );
 
+  // Throttled scroll dispatching logic to push changes to other windows
+  const broadcastScrollPosition = useCallback(
+    debounce(async (percent, docId) => {
+      if (!docId || isLocked) return;
+      try {
+        await client.patch(docId).set({ scrollPercent: percent }).commit();
+      } catch (err) {
+        console.error("Scroll Sync Error:", err);
+      }
+    }, 100),
+    [isLocked]
+  );
+
+  const handleLocalScroll = (e) => {
+    if (isLocked || isScrollingRemoteRef.current) return;
+    const target = e.currentTarget;
+    const maxScroll = target.scrollHeight - target.clientHeight;
+    if (maxScroll <= 0) return;
+    
+    const currentPercent = target.scrollTop / maxScroll;
+    broadcastScrollPosition(parseFloat(currentPercent.toFixed(4)), selectedId);
+  };
+
   const handleTextSelection = useCallback(() => {
-    if (typeof window === "undefined" || isLocked) return;
+    if (typeof window === "undefined" || isLocked || isTeleprompterMode) return;
 
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed || !editorRef.current) {
@@ -308,7 +366,7 @@ export default function LiveTextEditor() {
       show: true
     });
     checkActiveFormats();
-  }, [isLocked]);
+  }, [isLocked, isTeleprompterMode]);
 
   useEffect(() => {
     document.addEventListener("selectionchange", handleTextSelection);
@@ -635,7 +693,6 @@ export default function LiveTextEditor() {
         ></div>
       )}
 
-      {/* Sidebar Trigger Button */}
       <div 
         className={`absolute top-5 right-5 z-50 transition-all duration-700 ease-in-out ${
           isFullscreen ? "opacity-0 scale-95 pointer-events-none -translate-y-4" : "opacity-100 scale-100"
@@ -653,7 +710,6 @@ export default function LiveTextEditor() {
         </button>
       </div>
 
-      {/* Floating Exit Fullscreen Button */}
       <div 
         className={`fixed top-5 right-5 z-50 transition-all duration-700 ease-in-out ${
           isFullscreen ? "opacity-40 hover:opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 pointer-events-none -translate-y-4"
@@ -717,9 +773,11 @@ export default function LiveTextEditor() {
         </div>
       </div>
 
-      {/* Main Sheet Workspace */}
+      {/* Main Sheet Workspace Container wrapped with scroll detection functionality */}
       <div 
-        className={`relative flex-grow w-full max-w-4xl mx-auto transition-all duration-700 ease-in-out ${
+        ref={workspaceContainerRef}
+        onScroll={handleLocalScroll}
+        className={`relative flex-grow w-full max-w-4xl mx-auto h-screen overflow-y-auto transition-all duration-700 ease-in-out ${
           isFullscreen ? "pl-0 max-w-3xl" : "pl-16"
         }`}
       >
@@ -766,7 +824,7 @@ export default function LiveTextEditor() {
           </div>
         )}
 
-        {menuCoords.show && (
+        {menuCoords.show && !isTeleprompterMode && (
           <div
             ref={floatingMenuRef}
             style={{ top: menuCoords.top, left: menuCoords.left }}
@@ -921,13 +979,11 @@ export default function LiveTextEditor() {
           </div>
         )}
 
-        {/* Content sheet */}
         <div 
           className={`px-8 pb-32 transition-all duration-700 ease-in-out ${
             isLocked && selectedId ? "blur-sm pointer-events-none select-none opacity-40" : ""
           } ${isFullscreen ? "pt-20" : "pt-4"}`}
         >
-          {/* Top bar controls */}
           <div 
             className={`sticky top-2 z-20 flex flex-wrap items-center justify-between gap-4 p-1 mb-4 rounded-xl backdrop-blur-xl transition-all duration-700 ease-in-out ${
               isFullscreen ? "-translate-y-12 opacity-0 pointer-events-none max-h-0 mb-0 py-0 border-transparent overflow-hidden shadow-none" : "max-h-20"
@@ -935,7 +991,6 @@ export default function LiveTextEditor() {
               darkMode ? "bg-zinc-900/30 border-zinc-800/60 shadow-black/10 text-zinc-100" : "bg-white/45 border-white/60 shadow-zinc-200/30 text-zinc-800"
             }`}
           >
-            {/* Aesthetic breathing morph indicator instead of text/spinner */}
             <div className="flex items-center pl-3 h-5 select-none min-w-[60px]">
               {saving ? (
                 <div className="h-[3px] rounded-full bg-neutral-400/60 dark:bg-neutral-500/60 animate-morph-pulse transition-all duration-300" />
@@ -1134,6 +1189,17 @@ export default function LiveTextEditor() {
               </button>
 
               <button
+                onClick={() => setIsTeleprompterMode(!isTeleprompterMode)}
+                disabled={isLocked}
+                className={`p-2 rounded-full border transition-all ${
+                  darkMode ? "border-zinc-800/60 text-neutral-400 hover:bg-indigo-950/20" : "border-zinc-200/60 text-neutral-400 hover:bg-zinc-100/60"
+                } ${isTeleprompterMode ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/40" : ""}`}
+                title="Toggle Teleprompter Mode (Horizontal Mirror)"
+              >
+                <FiTv size={12} />
+              </button>
+
+              <button
                 onClick={toggleFullscreenEnabled}
                 disabled={isLocked}
                 className={`p-2 rounded-full border transition-colors ${
@@ -1167,6 +1233,9 @@ export default function LiveTextEditor() {
             className={`w-full text-xl font-light text-slate-600 mb-2 bg-transparent py-2 outline-none placeholder:font-light transition-all duration-700 ease-in-out ${
               darkMode ? "placeholder:text-neutral-700 text-neutral-100" : "placeholder:text-neutral-300 text-neutral-900"
             }`}
+            style={{
+              transform: isTeleprompterMode ? "scaleX(-1)" : "none",
+            }}
           />
 
           <div
@@ -1187,6 +1256,7 @@ export default function LiveTextEditor() {
               fontSize: `${fontSize}px`,
               lineHeight: lineHeight,
               fontWeight: fontWeight,
+              transform: isTeleprompterMode ? "scaleX(-1)" : "none",
             }}
           ></div>
         </div>
