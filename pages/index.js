@@ -134,8 +134,11 @@ export default function LiveTextEditor() {
   const [customBgColor, setCustomBgColor] = useState(null);
 
   const editorRef = useRef(null);
-  const workspaceContainerRef = useRef(null); // Reference to handle window instance scrolling
-  const isScrollingRemoteRef = useRef(false); // Flag to prevent scroll bounce loop updates
+  const workspaceContainerRef = useRef(null); 
+  
+  // Track scroll ownership to prevent feedback loops
+  const isScrollingRemoteRef = useRef(false); 
+  const lastLocalScrollTimeRef = useRef(0);
   
   const floatingMenuRef = useRef(null);
   const fontDropdownRef = useRef(null);
@@ -147,6 +150,34 @@ export default function LiveTextEditor() {
   const textColorPaletteToggleBtnRef = useRef(null);
   const bgPaletteRef = useRef(null);
   const bgPaletteToggleBtnRef = useRef(null);
+
+  // Intercept Volume Buttons for Scrolling in Teleprompter Mode
+  useEffect(() => {
+    if (!isTeleprompterMode) return;
+
+    const handleVolumeScroll = (e) => {
+      if (
+        e.key === "VolumeUp" || 
+        e.key === "AudioVolumeUp" || 
+        e.key === "VolumeDown" || 
+        e.key === "AudioVolumeDown"
+      ) {
+        e.preventDefault();
+        
+        const container = workspaceContainerRef.current;
+        if (!container) return;
+
+        const isUp = e.key === "VolumeUp" || e.key === "AudioVolumeUp";
+        const step = 45; 
+
+        lastLocalScrollTimeRef.current = Date.now();
+        container.scrollTop = container.scrollTop + (isUp ? -step : step);
+      }
+    };
+
+    window.addEventListener("keydown", handleVolumeScroll, { capture: true, passive: false });
+    return () => window.removeEventListener("keydown", handleVolumeScroll, { capture: true });
+  }, [isTeleprompterMode]);
 
   const checkActiveFormats = () => {
     if (typeof document !== "undefined") {
@@ -193,12 +224,15 @@ export default function LiveTextEditor() {
     fetchContent();
   }, [selectedId, isLocked]);
 
-  // Real-Time Listener to synchronize incoming remote scroll modifications
+  // Handle Remote Sync without creating feedback loops
   useEffect(() => {
     if (!selectedId || isLocked) return;
 
     const query = `*[_type == "novelContent" && _id == $id]`;
     const subscription = client.listen(query, { id: selectedId }).subscribe((update) => {
+      // CRITICAL FIX: If we have scrolled locally in the last 1.5 seconds, ignore database pushbacks
+      if (Date.now() - lastLocalScrollTimeRef.current < 1500) return;
+
       const remoteScrollPercent = update.result?.scrollPercent;
       
       if (remoteScrollPercent !== undefined && workspaceContainerRef.current) {
@@ -213,7 +247,6 @@ export default function LiveTextEditor() {
           behavior: "smooth"
         });
 
-        // Release lock after smooth transition concludes
         setTimeout(() => {
           isScrollingRemoteRef.current = false;
         }, 300);
@@ -303,7 +336,6 @@ export default function LiveTextEditor() {
     [selectedId, isLocked]
   );
 
-  // Throttled scroll dispatching logic to push changes to other windows
   const broadcastScrollPosition = useCallback(
     debounce(async (percent, docId) => {
       if (!docId || isLocked) return;
@@ -317,7 +349,14 @@ export default function LiveTextEditor() {
   );
 
   const handleLocalScroll = (e) => {
-    if (isLocked || isScrollingRemoteRef.current) return;
+    if (isLocked) return;
+    
+    // If the scroll was triggered by Sanity incoming, do not record or broadcast it back
+    if (isScrollingRemoteRef.current) return;
+    
+    // Log active interaction time to lock incoming changes
+    lastLocalScrollTimeRef.current = Date.now();
+
     const target = e.currentTarget;
     const maxScroll = target.scrollHeight - target.clientHeight;
     if (maxScroll <= 0) return;
@@ -773,7 +812,6 @@ export default function LiveTextEditor() {
         </div>
       </div>
 
-      {/* Main Sheet Workspace Container wrapped with scroll detection functionality */}
       <div 
         ref={workspaceContainerRef}
         onScroll={handleLocalScroll}
@@ -1065,7 +1103,7 @@ export default function LiveTextEditor() {
                         className={`w-full text-center py-1.5 rounded-lg text-[10px] tracking-wider transition-colors font-medium border border-dashed ${
                           darkMode 
                             ? "border-zinc-700/60 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200" 
-                            : "border-zinc-300 text-zinc-500 hover:bg-zinc-50 hover:text-zinc-800"
+                            : "border-zinc-300 text-zinc-50 hover:bg-zinc-50 hover:text-zinc-800"
                         }`}
                       >
                         + ADD GOOGLE FONT
@@ -1163,7 +1201,6 @@ export default function LiveTextEditor() {
                         </button>
                       </div>
                     </div>
-
                   </div>
                 )}
               </div>
